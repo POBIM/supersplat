@@ -1,10 +1,10 @@
 import { CommandQueue } from './command-queue';
 import { EditOp, MultiOp } from './edit-ops';
 import { Events } from './events';
-import { Splat } from './splat';
+import type { Selectable } from './selection';
 
 // Check if an operation references a specific splat
-const opReferencesSplat = (op: EditOp, splat: Splat): boolean => {
+const opReferencesSplat = (op: EditOp, splat: Selectable): boolean => {
     // Handle MultiOp by checking nested operations
     if (op instanceof MultiOp) {
         return op.ops.some(nestedOp => opReferencesSplat(nestedOp, splat));
@@ -141,7 +141,7 @@ class EditHistory {
     }
 
     // Remove all operations that reference a specific splat
-    removeForSplat(splat: Splat) {
+    removeForSplat(splat: Selectable) {
         // serialize with the queue so we don't reshape history while a queued op is mid-flight
         // (which could leave queued undo/redo pointing at indices that no longer exist).
         return this.queue(() => {

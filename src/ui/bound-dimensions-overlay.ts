@@ -50,9 +50,9 @@ class BoundDimensionsOverlay {
         });
 
         events.on('prerender', () => {
-            const selection = events.invoke('selection') as Splat;
+            const selection = events.invoke('selection');
 
-            if (!selection ||
+            if (!(selection instanceof Splat) ||
                 !selection.visible ||
                 !events.invoke('camera.bound') ||
                 !events.invoke('camera.boundDimensions')) {

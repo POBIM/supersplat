@@ -35,6 +35,7 @@ import {
 
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
+import { Model } from './model';
 import { Picker } from './picker';
 import { Serializer } from './serializer';
 import { vertexShader, fragmentShader } from './shaders/blit-shader';
@@ -942,16 +943,42 @@ class Camera extends Element {
 
     // intersect the scene at the normalized screen location (0-1 range) and focus the camera on this location
     async pickFocalPoint(x: number, y: number) {
-        const result = await this.intersect(x, y);
-        if (result) {
-            const { scene } = this;
+        const { scene } = this;
 
-            this.setFocalPoint(result.position);
-            this.setDistance(result.distance / this.sceneRadius * this.fovFactor);
+        // reference models are hit on the CPU against the current frame, then
+        // compared with the splat depth pick: the closer surface wins
+        const ray = new Ray();
+        this.getRay(x * scene.canvas.clientWidth, y * scene.canvas.clientHeight, ray);
+        const rayOrigin = ray.origin.clone();
+        const viewDir = this.mainCamera.forward.clone();
+        let modelHit: { element: Model, position: Vec3, distance: number } = null;
+        for (const element of scene.getElementsByType(ElementType.model) as Model[]) {
+            const hit = element.intersectRay(ray);
+            if (hit && (!modelHit || hit.distance < modelHit.distance)) {
+                modelHit = { element, ...hit };
+            }
+        }
+
+        const result = await this.intersect(x, y);
+        const useModel = modelHit && (!result || modelHit.distance < result.position.distance(rayOrigin));
+        const picked = useModel ? {
+            element: modelHit.element as Splat | Model,
+            position: modelHit.position,
+            // along-view distance, as for splat picks
+            distance: Math.abs(vec.sub2(modelHit.position, rayOrigin).dot(viewDir))
+        } : result && {
+            element: result.splat as Splat | Model,
+            position: result.position,
+            distance: result.distance
+        };
+
+        if (picked) {
+            this.setFocalPoint(picked.position);
+            this.setDistance(picked.distance / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,
-                splat: result.splat,
-                position: result.position
+                splat: picked.element,
+                position: picked.position
             });
         }
     }

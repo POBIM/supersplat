@@ -4,6 +4,7 @@ import { Entity, Mat4, Quat, TranslateGizmo, Vec3 } from 'playcanvas';
 import { EntityTransformOp } from '../edit-ops';
 import { Events } from '../events';
 import { Scene } from '../scene';
+import type { Selectable } from '../selection';
 import { Splat } from '../splat';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
@@ -166,8 +167,8 @@ class MeasureTool {
             events.invoke('pivot').end();
         });
 
-        events.on('selection.changed', (selection: Splat) => {
-            splat = selection;
+        events.on('selection.changed', (selection: Selectable) => {
+            splat = selection instanceof Splat ? selection : null;
             if (active) {
                 // for now we always deactivate the tool so the current transform handler remains in place
                 events.fire('tool.deactivate');

@@ -1,21 +1,26 @@
 import { Element, ElementType } from './element';
 import { Events } from './events';
+import { Model } from './model';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
-const registerSelectionEvents = (events: Events, scene: Scene) => {
-    let selection: Splat = null;
+// the selection is a single splat layer or reference model. Splat editing
+// (gaussian selection, colour, data) only applies when it is a splat.
+type Selectable = Splat | Model;
 
-    const setSelection = (splat: Splat) => {
-        if (splat !== selection && (!splat || splat.visible)) {
+const registerSelectionEvents = (events: Events, scene: Scene) => {
+    let selection: Selectable = null;
+
+    const setSelection = (element: Selectable) => {
+        if (element !== selection && (!element || element.visible)) {
             const prev = selection;
-            selection = splat;
+            selection = element;
             events.fire('selection.changed', selection, prev);
         }
     };
 
-    events.on('selection', (splat: Splat) => {
-        setSelection(splat);
+    events.on('selection', (element: Selectable) => {
+        setSelection(element);
     });
 
     events.function('selection', () => {
@@ -23,16 +28,19 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
     });
 
     events.on('selection.next', () => {
-        const splats = scene.getElementsByType(ElementType.splat) as Splat[];
-        if (splats.length > 1) {
-            const idx = splats.indexOf(selection);
-            setSelection(splats[(idx + 1) % splats.length]);
+        const elements = [
+            ...scene.getElementsByType(ElementType.splat),
+            ...scene.getElementsByType(ElementType.model)
+        ].filter(e => (e as Selectable).visible) as Selectable[];
+        if (elements.length > 1 || (elements.length === 1 && elements[0] !== selection)) {
+            const idx = elements.indexOf(selection);
+            setSelection(elements[(idx + 1) % elements.length]);
         }
     });
 
     events.on('scene.elementAdded', (element: Element) => {
-        if (element.type === ElementType.splat) {
-            setSelection(element as Splat);
+        if (element.type === ElementType.splat || element.type === ElementType.model) {
+            setSelection(element as Selectable);
         }
     });
 
@@ -52,9 +60,15 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
         }
     });
 
+    events.on('model.visibility', (model: Model) => {
+        if (model === selection && !model.visible) {
+            setSelection(null);
+        }
+    });
+
     events.on('camera.focalPointPicked', (details: { splat: Splat }) => {
         setSelection(details.splat);
     });
 };
 
-export { registerSelectionEvents };
+export { registerSelectionEvents, Selectable };

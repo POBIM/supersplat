@@ -6,6 +6,7 @@ import { Events } from '../events';
 import type { GridPlane } from '../infinite-grid';
 import { Pivot } from '../pivot';
 import { Scene } from '../scene';
+import type { Selectable } from '../selection';
 import { Splat } from '../splat';
 import { ToolOverlay, OverlayWriter } from '../tool-overlay';
 import { Transform } from '../transform';
@@ -225,14 +226,14 @@ class OrientTool {
             events.invoke('pivot').end();
         });
 
-        events.on('selection.changed', (selection: Splat) => {
+        events.on('selection.changed', (selection: Selectable) => {
             if (active) {
                 // deactivate before switching so the session cleanup applies to
                 // the splat the points belong to (we always deactivate so the
                 // current transform handler remains in place)
                 events.fire('tool.deactivate');
             }
-            splat = selection;
+            splat = selection instanceof Splat ? selection : null;
         });
 
         events.on('pivot.moved', () => {

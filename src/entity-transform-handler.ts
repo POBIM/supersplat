@@ -3,6 +3,7 @@ import { Mat4, Quat, Vec3 } from 'playcanvas';
 import { PlacePivotOp, EntityTransformOp, MultiOp } from './edit-ops';
 import { Events } from './events';
 import { Pivot } from './pivot';
+import type { Selectable } from './selection';
 import { Splat } from './splat';
 import { Transform } from './transform';
 import { TransformHandler } from './transform-handler';
@@ -13,7 +14,8 @@ const transform = new Transform();
 
 class EntityTransformHandler implements TransformHandler {
     events: Events;
-    splat: Splat;
+    // the selected splat layer or model being moved as a whole
+    splat: Selectable;
     top: EntityTransformOp;
     pop: PlacePivotOp;
     bindMat = new Mat4();
@@ -62,7 +64,7 @@ class EntityTransformHandler implements TransformHandler {
     }
 
     activate() {
-        this.splat = this.events.invoke('selection') as Splat;
+        this.splat = this.events.invoke('selection') as Selectable;
         if (this.splat) {
             this.placePivot();
         }

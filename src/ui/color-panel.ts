@@ -374,8 +374,8 @@ class ColorPanel extends Container {
             }
         });
 
-        events.on('selection.changed', (splat) => {
-            selected = splat;
+        events.on('selection.changed', (selection) => {
+            selected = selection instanceof Splat ? selection : null;
             // the pending grade belongs to the panel, not to a layer, but carrying it
             // across a selection change would silently retarget it
             setControls(NEUTRAL);

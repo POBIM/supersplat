@@ -4,6 +4,7 @@ import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { Model } from '../model';
+import type { Selectable } from '../selection';
 import { Splat } from '../splat';
 import deleteSvg from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
@@ -213,8 +214,7 @@ class SplatList extends Container {
             }
         });
 
-        // reference models share the list but not the splat selection: clicking
-        // one focuses the camera on it
+        // reference models share the list and the selection with splats
         events.on('scene.elementAdded', (element: Element) => {
             if (element.type === ElementType.model) {
                 const model = element as Model;
@@ -226,6 +226,11 @@ class SplatList extends Container {
 
                 item.on('visible', () => {
                     model.visible = true;
+
+                    // also select it if there is no other selection
+                    if (!events.invoke('selection')) {
+                        events.fire('selection', model);
+                    }
                 });
                 item.on('invisible', () => {
                     model.visible = false;
@@ -272,12 +277,16 @@ class SplatList extends Container {
             }
         });
 
-        events.on('selection.changed', (selection: Splat, prev: Splat) => {
+        events.on('selection.changed', (selection: Selectable, prev: Selectable) => {
             items.forEach((value, key) => {
                 value.selected = key === selection;
             });
+            modelItems.forEach((value, key) => {
+                value.selected = key === selection;
+            });
 
-            if (soloMode) {
+            // solo isolates splat layers; selecting a model leaves them as they are
+            if (soloMode && !(selection instanceof Model) && !(prev instanceof Model)) {
                 if (prev) {
                     prev.visible = false;
                 }
@@ -322,7 +331,7 @@ class SplatList extends Container {
         this.on('click', (item: SplatItem) => {
             for (const [model, value] of modelItems) {
                 if (item === value) {
-                    events.fire('model.focus', model);
+                    events.fire('selection', model);
                     return;
                 }
             }

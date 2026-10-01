@@ -6,7 +6,7 @@ import { selectedRanges, SelectAllOp, SelectNoneOp, SelectInvertOp, SelectOp, Hi
 import { Element, ElementType } from './element';
 import { Events } from './events';
 import type { GridPlane } from './infinite-grid';
-import type { Model } from './model';
+import { Model } from './model';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
@@ -16,9 +16,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const vec2 = new Vec3();
 
     // get the list of selected splats (currently limited to just a single one)
+    // splat editing applies to the selected layer only when it is a splat
     const selectedSplats = () => {
-        const selected = events.invoke('selection') as Splat;
-        return selected?.visible ? [selected] : [];
+        const selected = events.invoke('selection');
+        return selected instanceof Splat && selected.visible ? [selected] : [];
     };
 
     let lastExportCursor = 0;
@@ -50,8 +51,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // removal from the scene - undoing an AddSplatOp (duplicate / separate) also
     // removes the layer, and pruning there would delete the very op redo needs.
     events.on('scene.elementDestroyed', (element: Element) => {
-        if (element.type === ElementType.splat) {
-            editHistory.removeForSplat(element as Splat);
+        if (element.type === ElementType.splat || element.type === ElementType.model) {
+            editHistory.removeForSplat(element as Splat | Model);
         }
     });
 
@@ -298,6 +299,12 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             return;
         }
 
+        const selection = events.invoke('selection');
+        if (selection instanceof Model) {
+            events.fire('model.focus', selection);
+            return;
+        }
+
         const splat = selectedSplats()[0];
         if (splat) {
             // use current bounds (caller should have awaited the operation that changed data)
@@ -385,8 +392,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // returns true if the selected splat has selected gaussians
     events.function('selection.splats', () => {
-        const splat = events.invoke('selection') as Splat;
-        return splat?.numSelected > 0;
+        const splat = events.invoke('selection');
+        return splat instanceof Splat && splat.numSelected > 0;
     });
 
     events.on('select.all', () => {
@@ -939,16 +946,16 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     // seven authored values; the op composes them onto whatever grade the targets
     // already carry, so applying twice is the same as applying the composition.
     events.on('edit.applyColor', (params: GradeParams) => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
+        const splat = events.invoke('selection');
+        if (splat instanceof Splat) {
             editHistory.add(new SplatsColorOp({ splat, grade: gradeTerms(params, createGradeTerms()) }));
         }
     });
 
     // clear the grade on the selected gaussians
     events.on('edit.resetColor', () => {
-        const splat = events.invoke('selection') as Splat;
-        if (splat) {
+        const splat = events.invoke('selection');
+        if (splat instanceof Splat) {
             editHistory.add(new SplatsColorOp({ splat, grade: null }));
         }
     });

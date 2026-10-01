@@ -7,6 +7,7 @@ import type { RemovedInstances } from './gaussian-instances';
 import { IndexRanges, sortedPredicate } from './index-ranges';
 import { Pivot } from './pivot';
 import { Scene } from './scene';
+import type { Selectable } from './selection';
 import { SphereShape } from './sphere-shape';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -240,13 +241,16 @@ class RestoreMissingInstancesOp {
 }
 
 // op for modifying a splat transform
+// op for moving a whole splat layer or model. The target stays in the
+// `splat` field so EditHistory.removeForSplat prunes it when the target is
+// destroyed.
 class EntityTransformOp {
     name = 'entityTransform';
-    splat: Splat;
+    splat: Selectable;
     oldt: Transform;
     newt: Transform;
 
-    constructor(options: { splat: Splat, oldt: Transform, newt: Transform }) {
+    constructor(options: { splat: Selectable, oldt: Transform, newt: Transform }) {
         this.splat = options.splat;
         this.oldt = options.oldt;
         this.newt = options.newt;

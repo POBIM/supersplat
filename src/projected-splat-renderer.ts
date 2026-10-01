@@ -842,7 +842,9 @@ class ProjectedSplatRenderer {
             Math.abs(projection[0]) * targetSize.width * 0.5,
             Math.abs(projection[5]) * targetSize.height * 0.5
         ];
-        const selectedSplat = events.invoke('selection') as Splat;
+        // the selection may be a model; Splat is a type-only import here
+        const selection = events.invoke('selection');
+        const selectedSplat: Splat = selection?.type === 'splat' ? selection : null;
         const selectedColor = events.invoke('selectedClr');
         const unselectedColor = events.invoke('unselectedClr');
         const lockedColor = events.invoke('lockedClr');
